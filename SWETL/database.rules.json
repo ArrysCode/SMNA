@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "usuarios": {
+      ".read": "auth != null && (root.child('usuarios').child(auth.uid).child('rol').val() == 'Administrador')",
+      ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('rol').val() == 'Administrador')",
+      "$uid": {
+        ".validate": "newData.child('rol').isString() && (newData.child('rol').val() == 'Administrador' || newData.child('rol').val() == 'Usuario') && newData.child('nombre').isString() && newData.child('contrasena').isString()"
+      }
+    }
+  }
+}

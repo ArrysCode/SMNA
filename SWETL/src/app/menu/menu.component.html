@@ -1,0 +1,38 @@
+<ion-menu contentId="main-content">
+  <ion-header>
+    <ion-toolbar>
+      <ion-title>Menú</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-content>
+    <ion-list>
+      <ion-item [routerLink]="['/home']">
+        <ion-avatar slot="start"> <!-- Agregamos el slot "start" para colocar el ícono a la izquierda -->
+          <ion-icon name="home"></ion-icon>
+        </ion-avatar>
+        <ion-label>Inicio</ion-label>
+      </ion-item>
+      <ion-item [routerLink]="['/niveles']">
+        <ion-avatar slot="start">
+          <ion-icon name="analytics"></ion-icon>
+        </ion-avatar>
+        <ion-label>Niveles</ion-label>
+      </ion-item>
+      <ion-item [routerLink]="['/alertas']">
+        <ion-avatar slot="start">
+          <ion-icon name="alert"></ion-icon>
+        </ion-avatar>
+        <ion-label>Alertas</ion-label>
+      </ion-item>
+      <ion-item [routerLink]="['/salir']">
+        <ion-avatar slot="start">
+          <ion-icon name="log-out"></ion-icon>
+        </ion-avatar>
+        <ion-label>Salir</ion-label>
+      </ion-item>
+    </ion-list>
+  </ion-content>
+</ion-menu>
+
+<ion-router-outlet id="main-content"></ion-router-outlet>

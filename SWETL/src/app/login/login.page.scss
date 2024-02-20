@@ -1,0 +1,36 @@
+body{
+    background-color: #16161E;
+}
+
+ion-content {
+    --background: transparent; /* Hace que el fondo del ion-content sea transparente */
+  }
+  
+  .login-card {
+    max-width: 400px; /* Limita el ancho de la tarjeta */
+    margin: auto; /* Centra la tarjeta horizontalmente */
+    margin-top: 100px;
+    background-color: rgba(255, 255, 255, 0.1); /* Fondo de la tarjeta con transparencia */
+    backdrop-filter: blur(5px);
+    border-radius: 10px; /* Añade esquinas redondeadas a la tarjeta */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Añade una sombra suave a la tarjeta */
+  }
+  
+  ion-card-header,
+  ion-card-content {
+    text-align: center; /* Centra el contenido del encabezado y el contenido */
+  }
+  
+  ion-card-title {
+    font-size: 24px; /* Tamaño del título del card */
+    font-weight: bold; /* Hace el título en negrita */
+  }
+
+  img {
+    max-width: 200px; /* Ajusta el tamaño del logotipo según sea necesario */
+    margin-bottom: 20px; /* Agrega un margen inferior para separar el logotipo del formulario */
+  }
+  
+  
+
+  

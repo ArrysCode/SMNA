@@ -1,0 +1,7 @@
+{
+  "name": "SWETL",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
