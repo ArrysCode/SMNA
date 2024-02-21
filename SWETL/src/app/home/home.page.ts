@@ -1,8 +1,10 @@
 import { Component } from '@angular/core';
-import { AlertController } from '@ionic/angular';
+import { AlertController, ModalController } from '@ionic/angular';
 import { AuthService } from '../services/auth.service';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Usuario } from '../interfaces/usuarios.interface';
+import { getAuth, deleteUser } from 'firebase/auth';
+// Ajusta la ruta según tu estructura de archivos
 
 @Component({
   selector: 'app-home',
@@ -15,6 +17,7 @@ export class HomePage {
   isAdmin: boolean = false; // Variable para verificar si el usuario es administrador
   
   constructor(
+    private modalController: ModalController,
     private alertController: AlertController,
     private authService: AuthService,
     private firestore: AngularFirestore
@@ -31,6 +34,34 @@ export class HomePage {
         });
       }
     });
+  }
+
+  
+  
+  
+  async deleteUser(userId: string) {
+    const auth = getAuth();
+    const user = auth.currentUser;
+  
+    if (user) {
+      deleteUser(user)
+        .then(() => {
+          // Eliminar documento de usuario en Firestore
+          this.firestore.collection('usuarios').doc(userId).delete().then(() => {
+            this.presentAlert('Usuario eliminado exitosamente.');
+          }).catch(error => {
+            console.error('Error al eliminar usuario en Firestore', error);
+            this.presentAlert('Error al eliminar usuario.');
+          });
+        })
+        .catch((error) => {
+          console.error('Error al eliminar usuario en Authentication', error);
+          this.presentAlert('Error al eliminar usuario.');
+        });
+    } else {
+      console.error('No hay ningún usuario autenticado');
+      this.presentAlert('No hay ningún usuario autenticado.');
+    }
   }
 
   async openCreateUserAlert() {
@@ -152,14 +183,5 @@ export class HomePage {
     });
 
     await alert.present();
-  }
-
-  deleteUser(userId: string) {
-    this.firestore.collection('usuarios').doc(userId).delete().then(() => {
-      this.presentAlert('Usuario eliminado exitosamente.');
-    }).catch(error => {
-      console.error('Error al eliminar usuario', error);
-      this.presentAlert('Error al eliminar usuario.');
-    });
   }
 }
