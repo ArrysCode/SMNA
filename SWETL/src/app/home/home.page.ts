@@ -1,10 +1,7 @@
-import { Component } from '@angular/core';
-import { AlertController, ModalController } from '@ionic/angular';
-import { AuthService } from '../services/auth.service';
+import { Component , OnInit} from '@angular/core';
+import { AlertController } from '@ionic/angular';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
-import { Usuario } from '../interfaces/usuarios.interface';
-import { getAuth, deleteUser } from 'firebase/auth';
-// Ajusta la ruta según tu estructura de archivos
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -12,56 +9,24 @@ import { getAuth, deleteUser } from 'firebase/auth';
   styleUrls: ['home.page.scss'],
 })
 export class HomePage {
+  isAdmin: boolean = false;
   roles: string[] = ['user', 'admin'];
-  selectedRole: string = ''; // Para almacenar el rol seleccionado por el usuario
-  isAdmin: boolean = false; // Variable para verificar si el usuario es administrador
-  
+  selectedRole: string = '';
+  usersData: { id: string, correo: string, rol: string[] }[] = [];
+  currentUserRoles: string[] = [];
+
   constructor(
-    private modalController: ModalController,
     private alertController: AlertController,
-    private authService: AuthService,
-    private firestore: AngularFirestore
+    private firestore: AngularFirestore,
+    private authService: AuthService
   ) {}
 
-  ngOnInit() {
-    // Verificar el rol del usuario al cargar la página
-    this.authService.getCurrentUser().subscribe(user => {
-      if (user) {
-        // Si el usuario está autenticado, verificar si tiene el rol de administrador
-        this.authService.getUserRoles(user.uid).subscribe(roles => {
-          this.isAdmin = roles.includes('admin');
-          console.log('¿Es administrador?', this.isAdmin ? 'Sí' : 'No');
-        });
-      }
-    });
-  }
-
+  async ngOnInit() {
+    this.isAdmin = true; // Implementa tu lógica para determinar si el usuario es administrador
+    this.loadUsersData(); // Cargar datos de usuario al inicializar
+    
+    
   
-  
-  
-  async deleteUser(userId: string) {
-    const auth = getAuth();
-    const user = auth.currentUser;
-  
-    if (user) {
-      deleteUser(user)
-        .then(() => {
-          // Eliminar documento de usuario en Firestore
-          this.firestore.collection('usuarios').doc(userId).delete().then(() => {
-            this.presentAlert('Usuario eliminado exitosamente.');
-          }).catch(error => {
-            console.error('Error al eliminar usuario en Firestore', error);
-            this.presentAlert('Error al eliminar usuario.');
-          });
-        })
-        .catch((error) => {
-          console.error('Error al eliminar usuario en Authentication', error);
-          this.presentAlert('Error al eliminar usuario.');
-        });
-    } else {
-      console.error('No hay ningún usuario autenticado');
-      this.presentAlert('No hay ningún usuario autenticado.');
-    }
   }
 
   async openCreateUserAlert() {
@@ -71,12 +36,12 @@ export class HomePage {
         header: 'Crear Usuario',
         inputs: [
           {
-            name: 'username',
+            name: 'correo',
             type: 'text',
             placeholder: 'Nombre de usuario'
           },
           {
-            name: 'password',
+            name: 'contraseña',
             type: 'password',
             placeholder: 'Contraseña'
           }
@@ -89,17 +54,17 @@ export class HomePage {
           {
             text: 'Crear',
             handler: (data) => {
-              this.presentRoleSelectionAlert(data.username, data.password);
+              this.presentRoleSelectionAlert(data.correo, data.contraseña);
             }
           }
         ]
       });
-  
+
       await alert.present();
     }
   }
 
-  async presentRoleSelectionAlert(username: string, password: string) {
+  async presentRoleSelectionAlert(correo: string, contraseña: string) {
     const alert = await this.alertController.create({
       header: 'Seleccionar Rol',
       inputs: this.roles.map(role => ({
@@ -116,7 +81,7 @@ export class HomePage {
         {
           text: 'Seleccionar',
           handler: (selectedRole) => {
-            this.createUser(username, password, selectedRole);
+            this.createUser(correo, contraseña, selectedRole);
           }
         }
       ]
@@ -125,13 +90,22 @@ export class HomePage {
     await alert.present();
   }
 
-  createUser(username: string, password: string, role: string) {
-    this.authService.createUser(username, password, [role]).then(() => {
-      this.presentAlert('Usuario creado exitosamente.');
-    }).catch(error => {
-      console.error('Error al crear usuario', error);
-      this.presentAlert('Error al crear usuario.');
-    });
+  createUser(correo: string, contraseña: string, rol: string) {
+    // Verifica si el rol es válido antes de agregar el usuario a Firestore
+    if (rol) {
+      // Ahora puedes agregar el usuario a Firestore con el rol proporcionado
+      this.firestore.collection('usuarios').add({ correo, contraseña, rol: [rol] })
+        .then(() => {
+          this.presentAlert('Usuario creado exitosamente.');
+        })
+        .catch(error => {
+          console.error('Error al agregar usuario a Firestore:', error);
+          this.presentAlert('Error al crear usuario.');
+        });
+    } else {
+      console.error('Rol no válido:', rol);
+      // Aquí puedes manejar el caso cuando el rol no es válido
+    }
   }
 
   async presentAlert(message: string) {
@@ -144,44 +118,72 @@ export class HomePage {
     await alert.present();
   }
 
-  printUsers() {
-    // Mostrar la lista de usuarios solo si el usuario es administrador
-    if (this.isAdmin) {
-      this.firestore.collection('usuarios').get().subscribe(querySnapshot => {
-        let usersData: { id: string, correo: string, roles: string[] }[] = [];
-        querySnapshot.forEach(doc => {
-          const userData = doc.data() as Usuario;
-          usersData.push({ id: doc.id, correo: userData.correo, roles: userData.roles });
-        });
 
-        this.presentUserSelectionAlert(usersData);
+
+  async openDeleteUserAlert() {
+    // Mostrar el diálogo de selección de usuario para eliminar solo si el usuario es administrador
+    if (this.isAdmin) {
+      const alert = await this.alertController.create({
+        header: 'Eliminar Usuario',
+        message: 'Seleccione un usuario para eliminar:',
+        inputs: this.usersData.map(user => ({
+          name: user.id,
+          type: 'radio',
+          label: `${user.correo} - Roles: ${user.rol}`,
+          value: user.id
+        })),
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel'
+          },
+          {
+            text: 'Eliminar',
+            handler: (userId) => {
+              this.deleteUser(userId);
+            }
+          }
+        ]
       });
+
+      await alert.present();
     }
   }
 
-  async presentUserSelectionAlert(usersData: { id: string, correo: string, roles: string[] }[]) {
-    const alert = await this.alertController.create({
-      header: 'Seleccione un usuario',
-      inputs: usersData.map(user => ({
-        name: user.id,
-        type: 'radio',
-        label: `${user.correo} - Roles: ${user.roles.join(', ')}`,
-        value: user.id
-      })),
-      buttons: [
-        {
-          text: 'Cancelar',
-          role: 'cancel'
-        },
-        {
-          text: 'Eliminar',
-          handler: (userId) => {
-            this.deleteUser(userId);
-          }
-        }
-      ]
-    });
-
-    await alert.present();
+  async deleteUser(userId: string) {
+    try {
+      await this.firestore.collection('usuarios').doc(userId).delete();
+      this.presentAlert('Usuario eliminado exitosamente.');
+      this.loadUsersData(); // Volver a cargar los datos de usuario después de eliminar uno
+    } catch (error) {
+      console.error('Error al eliminar usuario en Firestore', error);
+      this.presentAlert('Error al eliminar usuario.');
+    }
   }
-}
+
+  loadUsersData() {
+    // Cargar datos de usuario desde Firestore
+    this.firestore.collection('usuarios').get().subscribe(querySnapshot => {
+      this.usersData = [];
+      querySnapshot.forEach(doc => {
+        const userData = doc.data() as { correo: string, rol: string[] };
+        this.usersData.push({ id: doc.id, correo: userData.correo, rol: userData.rol });
+      });
+      // Obtener los roles del usuario actual (por ejemplo, mediante Firestore)
+      // this.currentUserRoles = rolesObtenidos;
+    });
+  }
+  }
+  
+
+
+
+
+
+
+
+
+
+
+  
+

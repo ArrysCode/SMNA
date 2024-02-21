@@ -1,8 +1,13 @@
-// AuthService
 import { Injectable } from '@angular/core';
-import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { map } from 'rxjs/operators';
+import firebase from 'firebase/compat/app';
+
+// Definir una interfaz para los datos de usuario
+interface UserData {
+  rol: string[]; // Define la propiedad rol y su tipo
+  // Puedes agregar otras propiedades si las hay
+}
 
 @Injectable({
   providedIn: 'root'
@@ -10,68 +15,43 @@ import { map } from 'rxjs/operators';
 export class AuthService {
 
   constructor(
-    private afAuth: AngularFireAuth,
     private firestore: AngularFirestore
   ) {}
 
-  getCurrentUser() {
-    return this.afAuth.authState;
+  login(email: string, password: string) {
+    // Verificar si el usuario existe en Firestore y las credenciales son correctas
+    return this.firestore.collection('usuarios', ref => ref.where('correo', '==', email).where('contraseña', '==', password)).get()
+      .pipe(
+        map(snapshot => {
+          if (snapshot.empty) {
+            // No se encontró ningún usuario con las credenciales proporcionadas
+            throw new Error('Correo electrónico o contraseña incorrectos.');
+          } else {
+            // Usuario encontrado, devuelve el documento de usuario
+            const userData = snapshot.docs[0].data();
+            return userData;
+          }
+        })
+      );
   }
 
-  getUserRoles(userId: string) {
-    return this.firestore.collection('usuarios').doc(userId).valueChanges().pipe(
-      map((user: any) => user ? user.roles : [])
-    );
-  }
 
-  async login(email: string, password: string) {
-    return this.afAuth.signInWithEmailAndPassword(email, password);
-  }
-
-  async logout() {
-    return this.afAuth.signOut();
-  }
-
-  async createUser(email: string, password: string, roles: string[]) {
+   /// Método para obtener los roles del usuario actual
+   async getUserRoles(userId: string) {
     try {
-      const userCredential = await this.afAuth.createUserWithEmailAndPassword(email, password);
-      if (userCredential && userCredential.user) {
-        await this.createFirestoreUserDocument(userCredential.user.uid, email, roles);
-        console.log('Usuario creado exitosamente', userCredential.user);
+      const userDoc = await this.firestore.collection('usuarios').doc(userId).get().toPromise();
+      if (userDoc && userDoc.exists) {
+        const userData = userDoc.data() as UserData;
+        const roles = userData?.rol;
+        console.log('Roles del usuario:', roles);
+        return roles;
       } else {
-        console.error('El objeto userCredential o user es nulo');
+        console.error('Documento de usuario no encontrado en Firestore.');
+        return null;
       }
     } catch (error) {
-      console.error('Error al crear el usuario', error);
+      console.error('Error al obtener roles del usuario en Firestore:', error);
+      return null;
     }
   }
-
-  private async createFirestoreUserDocument(userId: string, email: string, roles: string[]) {
-    try {
-      await this.firestore.collection('usuarios').doc(userId).set({
-        correo: email,
-        roles: roles
-      });
-      console.log('Documento de usuario creado exitosamente en Firestore');
-    } catch (error) {
-      console.error('Error al crear el documento de usuario en Firestore', error);
-    }
-  }
-
-  async assignRoles(userId: string, roles: string[]) {
-    try {
-      await this.firestore.doc(`users/${userId}`).set({ roles }, { merge: true });
-      console.log('Roles asignados correctamente');
-    } catch (error) {
-      console.error('Error al asignar roles', error);
-    }
-  }
-
-  // Método para verificar si el usuario está autenticado
-  async isAuthenticated() {
-    const user = await this.afAuth.authState.toPromise();
-    return !!user;
-  }
-
-
 }

@@ -23,11 +23,9 @@
     <ion-button (click)="openCreateUserAlert()" *ngIf="isAdmin">
       Crear Usuario
     </ion-button>
-<br>
-<ion-button (click)="printUsers()" *ngIf="isAdmin">
-  Eliminar Usuarios
-</ion-button>
+    <br>
+    <ion-button (click)="openDeleteUserAlert()" *ngIf="isAdmin">
+      Eliminar Usuario
+    </ion-button>
   </div>
-
-  
 </ion-content>
